@@ -113,60 +113,80 @@ def wrl_to_xyz(wrl_input_path : str, obj_form_path : str ,obj_output_path : str,
                 _r = round(float(r)*255) # 255FORMAT rgb 값으로 변환 후  담음 .
                 # if (_r == 176) or (_r=='176'):
                 #     temp ="sdfsd"
-                ########## 오차범위내의 오차는 정상적인 r,g,b값으로 바꾸고 정상적인 r,g,b값은 정상 그대로 담는다.
+                ########## 정상적인 r,g,b값은 정상 그대로 담고 오차범위내의 오차는 정상적인 r,g,b값으로 바꾸어 담는다.
                 for rbg_atom in rgb_atom_list:
-                    if 0 < abs(int(_r) - int(rbg_atom)) <= big_err_range:
-                        _r = rbg_atom
-                        rgb_small.append(int(_r))
+
+                    if _r == int(rbg_atom): # 정상적인 r,g,b값
+                        rgb_small.append(_r) # 그대로 rgb_small에 담음.
+
+                    elif 0 < abs(int(_r) - int(rbg_atom)) <= big_err_range: # 정의된 r, g, b 값 중
+                                                                            # 오차범위내의 오차 r, g, b값이 있으면
+                        _r = rbg_atom # 정의된 r, g, b 값으로 치환.
+                        rgb_small.append(int(_r)) # rgb_small 리스트에 담는다.
                         # rgb_small.append(str(_r))
-                    elif _r == int(rbg_atom):
-                        rgb_small.append(_r)
+
                     # elif abs(int(_r) - int(rbg_atom)) >2 :
                     #     err_rgb.append(n)
 
                     else:
                         # rgb_small.append(_r)
                         err_rgb[n1] = _r #나중에 err_rgb 리스트객체가 아래어딘가코드에서 새로생김 확인필요.
-                rgb_1in255.append(int(_r)) # 255form 의 [r,g,b] 형식으로 담음. 필요한 rgb만 0~255형태로 담음.
+########################## 이 아래코드에서 rgb_1in255리스트객체에 담기는 _r 은 #########################################
+##########################  _r 오차범위내의 오차들은 정의된 r,g,b값으로 변환되어 담긴다. 다른 말로 하면 #################
+########################## _r 은 정의되 r,g,b 값(오차범위내의 r,g,b값은 변환되었으므로)과 오차범위밖의 r,g,b값만 담긴다.###
+                rgb_1in255.append(int(_r)) # 255form 의 [r,g,b] 형식으로 담음.
+
         rgb.append(rgb_small_float)
         # tme = 0
         # if rgb_small == [100]:
         #     tme += 1
         rgb_large.append(rgb_small) # 여기서 오차가 일정에러 이상이면 rgb_small의 요소수가 3개가 안됨.정상은 3개여야됨.
+                                    # 즉 오차범위를 넘어서는 r,g,b 값은 담기지 않음.그래서 그중(r,g,b)중 하나라도 없으면
+                                    # 그 하나가 담기지 않아서 원래 완전한 r,g,b쌍이 만들어지지 않음.
 
         rgb_255form.append(rgb_1in255) # 255form 의 [[r,g,b],[..]....] 이중 리스트로 담음.
-        rgb_dict[n1] = rgb_1in255
+        rgb_dict[n1] = rgb_1in255 #정의된 rgb 값(오차범위내의 rgb값은 변환되었으므로)과 오차범위밖의 rgb값이 담긴다.
+                                  # {n1 :[r,g,b], n2:[r,g,b],...} 형식으로 담음.
 
     rgb_define_list = [] # 정의된 치아구분번호별 rgb 리스트
     for kv in color_idx_key_v: # 딕셔너리 item 객체에서 value 값만 리스트에 담기 위함.다음 단계에서  이리스트요소들을
         rgb_define_list.append(kv[1]) # 비교하기 위함.
 
+######################### err_rgb 리스트객체에 오차범위를 벗어난 rgb 값만 걸려내어 담는 코드 #############################
     err_rgb = [] # 정의된 치아구분번호별 rgb리스트에 해당되지 않는 rgb를 추려냄.
-    for n_rgb in rgb_dict.items():
+    for n_rgb in rgb_dict.items(): # 여기서 이미 오차범위내의 오차들은 정의된 r,g,b 값으로 변했으므로
         rgb_str = ' '.join(map(str, n_rgb[1]))
-        if rgb_str not in rgb_define_list:
-            err_rgb.append(n_rgb)
+        if rgb_str not in rgb_define_list: # 오차범위를 벗어난 r,g,b 값들만 이 조건문에 걸리게 되어있음.
+            err_rgb.append(n_rgb) # 여기에 담긴다.
     err_rgb_copy = copy.deepcopy(err_rgb)
+#######################################################################################################################
+    # correct_err_rgb = [] # 여기서 잠깐 나머지값을 담는 용도로만 쓰이고 향후 쓰이지 않는 듯.없어서 될 객체인듯 함.
+    # for rgb_a in rgb_atom_list: # R,G,B로 쓰이는 값들을 중복제거한 상태로 추린 상태의 리스트요소를 반복문으로 넘긴다.
+    #     for n1, err in enumerate(err_rgb): # err(정의된 r,g,b가 아니면 모두포함)인 rgb 요소들을 반복문으로 넘긴다.
+    #
+    #         for n2, r_g_b in enumerate(err[1]): # r,b,g값이 한묶음으로 묶여있기에 이를 하나씩 r,g,b 값으로 풀어서 반복한다.
+    #             # _r_g_b = r_g_b[1]
+    #             # temppp = abs(int(r_g_b) - int(rgb_a))
+    #             # if temppp == 8:
+    #             #     print("hh")
+    #             if str(r_g_b) == str(rgb_a): # err난 r,g,b중 한개의 값이 rgb_atom_list 중 현재 요소와 일치하면 넘어간다.
+    #                 continue
+    #             elif 0 < abs(int(r_g_b) - int(rgb_a)) <= big_err_range: # 여기에 안걸리는 듯.이미 앞 오차범위내의
+    #                                                                     # r, g, b 값들 걸려져서 오차범위밖의
+    #                                                                     # r,g,b 값만 남은 상태에서 여기에 걸릴수가 없음.
+    #             # elif 0 < abs(int(r_g_b) - int(rgb_a)) <= 2:
+    #                 err_rgb_copy[n1][1][n2] = int(rgb_a)
+    #             else:
+    #                 correct_err_rgb.append(err)
 
-    correct_err_rgb = []
-    for rgb_a in rgb_atom_list:
-        for n1, err in enumerate(err_rgb):
 
-            for n2, r_g_b in enumerate(err[1]):
-                # _r_g_b = r_g_b[1]
-                if str(r_g_b) == str(rgb_a):
-                    continue
-                elif 0 < abs(int(r_g_b) - int(rgb_a)) <= 2:
-                    err_rgb_copy[n1][1][n2] = int(rgb_a)
-                else:
-                    correct_err_rgb.append(err)
-                    
-    # 정밀도문제를 포함한 에러에서 정밀도문제만 제거한 것을 객체에 담는다.이것이 문제가 되는 RGB값과 해당 인덱스이다.
-    big_err = []
-    for err_org in err_rgb:
-        for err_copy in err_rgb_copy:
-            if err_org == err_copy:
-                big_err.append(err_copy)
+    # # 정밀도문제를 포함한 에러에서 정밀도문제만 제거한 것을 객체에 담는다.이것이 문제가 되는 RGB값과 해당 인덱스이다.
+    # big_err = []
+    # for err_org in err_rgb:
+    #     for err_copy in err_rgb_copy:
+    #         if err_org == err_copy:
+    #             big_err.append(err_copy)
+    big_err = err_rgb
 
     # big_err = set(err_rgb_copy)
     # temppp = set(correct_err_rgb)
@@ -432,12 +452,11 @@ def wrl_to_xyz(wrl_input_path : str, obj_form_path : str ,obj_output_path : str,
 
 
 if __name__ == "__main__":
-    big_err_range = "2" # RGB의 오차범위를 몇으로 할지를 정한다.
+    big_err_range = "6" # RGB의 오차범위를 몇으로 할지를 정한다.
     obj_mode = "all_zero" # obj파일의 모든 rgb값을  0으로 통일 --> AI 인풋용 데이터용.(제주한라대 제공용)
     # obj_mode = "err_zero"  # obj파일의 모든 rgb값의 제한범위를 넘은 err만 0으로 통일 --> 테스트용으로 err가 검은색으로표현됨.
     # obj_mode = "real" # # obj파일의 모든 rgb값을 실제값 그대로 표현.
-    # temp = os.getcwd()
-    # ttemp = './'
+
     root = r'../data'  # root 폴더가 있고 그아래 wrl폴더, xyz폴더가 있음.
     obj_form_path = root + '\\obj_form.obj' # obj 파일의 기본포맷으로 이를 기초로 output obj 파일을 만든다.
     # label_num_path = root + '\\Crown_tooth_label.json' # rgb값별 식별넘버가 있음.
